@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Matrix bookmarklet generator</title>
+<script>
+const encryptText = async (plainText, password) => {
+  const ptUtf8 = new TextEncoder().encode(plainText);
+  const pwUtf8 = new TextEncoder().encode(password);
+  const pwHash = await crypto.subtle.digest('SHA-256', pwUtf8); 
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const alg = { name: 'AES-GCM', iv: iv };
+  const key = await crypto.subtle.importKey('raw', pwHash, alg, false, ['encrypt']);
+
+  return { iv, encBuffer: await crypto.subtle.encrypt(alg, key, ptUtf8) };
+}
+
+// input : document.querySelectorAll('th[align="left"][bgcolor="#6699CC"]') の 2，3，4番目
+// output: document.login.message3.value, 4, 5
+function generate() {
+  const matrix = document.getElementById("matrix").value.replace(/\s/g, '');
+  if (matrix.length != 70) {
+    alert('matrix code is not correct length.');
+    return;
+  }
+  const pass = document.getElementById("pass").value;
+  encryptText(matrix, pass).then(res => {
+    const ivstr = "new Uint8Array(["+res.iv.toString()+"])";
+    const encstr = "new Uint8Array(["+new Uint8Array(res.encBuffer).toString()+"]).buffer";
+    document.getElementById("output").value = `javascript:if(location.href.startsWith('https://portal.nap.gsic.titech.ac.jp/GetAccess/Login')){(async ()=>{try{const pass=prompt("Enter passphrase");const alg={name:'AES-GCM',iv:${ivstr}};const m = new TextDecoder().decode(await crypto.subtle.decrypt(alg,await crypto.subtle.importKey('raw',await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pass)),alg,false,['decrypt']),${encstr}));const x = document.querySelectorAll('th[align="left"][bgcolor="#6699CC"]');document.login.message3.value = m.charAt(x[2].textContent.charCodeAt(1)-65+(x[2].textContent.charCodeAt(3)-49)*10);document.login.message4.value = m.charAt(x[3].textContent.charCodeAt(1)-65+(x[3].textContent.charCodeAt(3)-49)*10);document.login.message5.value=m.charAt(x[4].textContent.charCodeAt(1)-65+(x[4].textContent.charCodeAt(3)-49)*10);document.login.submit();}catch(e){alert('password incorrect');}})();}`;
+  });
+}
+</script>
+</head>
+<body>
+<h1>東工大ポータルのマトリクスコード入力自動化装置</h1>
+<p>注：このプログラムはHTMLファイル単独で動作します．
+  そのため，一度ダウンロードして，悪意のないコードがないことを確認した上で使用することをおすすめします．</p>
+<p>このツールはブックマークレットを利用することによって，東工大ポータルのマトリクス認証を自動化するものです．
+  やることとしては，マトリクスコードを暗号化してJavaScriptに埋め込んだ文字列をブックマークに登録することで，
+  マトリクスコード認証画面でブックマークを呼び出し，パスフレーズを入力すると自動的にログインを行います．
+</p>
+
+<h2>注意</h2>
+<p>このツールにおいて用いるパスフレーズは，東工大ポータルのログインパスワードとは独立したものです．
+  そのため，東工大ポータルおよびその他のサービスで使用したことがないパスフレーズを使用してください．</p>
+
+<p>1. マトリクスコードの70文字を入力してください:</p>
+<textarea id="matrix" rows="7" cols="13" style="font-family: Courier, Monaco, monospace"></textarea>
+<p>2. パスフレーズを設定してください</p>
+<input type="password" id="pass"><br>
+<input type="button" value="生成する" onclick="generate()">
+<p>3. 以下の文字列をブックマークに登録してください</p>
+<textarea readonly id="output" rows="20" cols="80"></textarea>
+
+<p>ライセンス： MITライセンス</p>
+</body>
+</html>
