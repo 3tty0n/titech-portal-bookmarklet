@@ -1,4 +1,7 @@
 # titech-portal-bookmarklet
-東工大のポータルサイトのマトリクス認証を自動でやるツール
 
-`matgen.html` をダウンロードして使ってください．
+An auto login tool for Tokyo Tech Portal.
+
+## Usage
+
+Visit [here!](https://3tty0n.github.io/titech-portal-bookmarklet/)
